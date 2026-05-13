@@ -25,6 +25,7 @@ Edit `profile.private.yml` with your real details. Private profiles, `.env`, bro
 autoapplyer validate-profile --profile profile.private.yml
 autoapplyer validate-employer --employer employers/example_workday.yml
 autoapplyer validate-writing-profile --writing-profile writing_profile.private.yml
+autoapplyer validate-cv --cv cv.private.yml
 ```
 
 ## Run Against The Mock Fixture
@@ -143,3 +144,79 @@ autoapplyer generate-text \
   --writing-provider openai \
   --employer employers/walker_hamill_graduate_investment_associate.yml
 ```
+
+## Structured CV And Tailoring
+
+`CV Miko Matheron.pdf` is the static fallback. For per-employer tailoring, the CV
+also lives as structured YAML in `cv.private.yml` (gitignored) and is rendered
+to PDF via an HTML/CSS template that ships with the package.
+
+Render the CV as-is:
+
+```bash
+autoapplyer render-cv --cv cv.private.yml --output runs/cv.pdf
+```
+
+Tailor the CV to a specific employer's job description. This uses two LLM
+calls: one to extract a keyword profile from the JD, one per bullet to propose
+a faithful rewrite. Every rewrite passes a lint pass that rejects banned
+phrases, em dashes, overgrowth beyond 15 percent in length, and changes to the
+original text we asked it to rewrite. The pipeline never invents employers,
+metrics, grades, tools, languages, or visa status — those categories come from
+your `writing_profile.private.yml` `claim_rules.never_invent`.
+
+```bash
+AUTOAPPLYER_CV_TAILOR_PROVIDER=openai \
+autoapplyer tailor-cv \
+  --cv cv.private.yml \
+  --employer employers/acme_workday.yml \
+  --writing-profile writing_profile.private.yml \
+  --provider openai
+```
+
+Outputs:
+
+- Tailored PDF saved under ignored `generated_cvs/<employer>_<job>_<timestamp>.pdf`.
+- A markdown report alongside it with: extracted keyword profile, accepted
+  rewrites with before/after diffs and incorporated keywords, rejected
+  rewrites and the reason each was rejected, and an ATS readback showing which
+  JD keywords now appear in the rendered CV text.
+
+To have `run` tailor the CV before uploading, set `cv_tailoring.enabled: true`
+in the employer config and pass `--cv` to `run`:
+
+```yaml
+# employers/acme_workday.yml
+cv_tailoring:
+  enabled: true
+  provider: "openai"
+  max_bullets_to_rewrite: 8
+  upload_tailored_cv: true
+```
+
+```bash
+AUTOAPPLYER_CV_TAILOR_PROVIDER=openai \
+autoapplyer run \
+  --profile profile.private.yml \
+  --writing-profile writing_profile.private.yml \
+  --cv cv.private.yml \
+  --employer employers/acme_workday.yml
+```
+
+The runner uploads the tailored PDF instead of the default `resume_path`. It
+still stops at the manual review gate; tailored CVs always require human
+review before submission.
+
+You can also pre-render a tailored CV once and pass it explicitly:
+
+```bash
+autoapplyer run --tailored-cv generated_cvs/acme_analyst_20260514-101500.pdf \
+  --profile profile.private.yml --employer employers/acme_workday.yml
+```
+
+What the tailoring engine will NOT do, on principle:
+
+- Invisible white-text keyword stuffing or off-page hidden keywords. Modern
+  ATS and recruiters flag these. The renderer produces a visible, parseable PDF.
+- Invent employers, deal experience, tools, languages, grades, or metrics.
+- Bypass the manual review gate.

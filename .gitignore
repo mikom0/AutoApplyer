@@ -12,6 +12,7 @@ venv/
 .env
 profile.private.yml
 writing_profile.private.yml
+cv.private.yml
 profiles/*.private.yml
 *.pdf
 
@@ -27,6 +28,7 @@ traces/
 artifacts/
 llm_cache/
 generated_messages/
+generated_cvs/
 
 # OS/editor
 .DS_Store

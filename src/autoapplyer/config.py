@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import yaml
 
-from autoapplyer.models import CandidateProfile, EmployerConfig, WritingProfile
+from autoapplyer.models import CandidateProfile, CVDocument, EmployerConfig, WritingProfile
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:
@@ -29,6 +29,10 @@ def load_employer_config(path: Path) -> EmployerConfig:
 
 def load_writing_profile(path: Path) -> WritingProfile:
     return WritingProfile.model_validate(load_yaml(path))
+
+
+def load_cv_document(path: Path) -> CVDocument:
+    return CVDocument.model_validate(load_yaml(path))
 
 
 def resolve_local_path(base_dir: Path, configured_path: str) -> Path:

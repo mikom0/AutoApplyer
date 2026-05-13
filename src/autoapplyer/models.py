@@ -169,6 +169,16 @@ class FreeTextFieldConfig(BaseModel):
     required: bool = False
 
 
+class CVTailoringConfig(BaseModel):
+    model_config = StrictModelConfig
+
+    enabled: bool = False
+    provider: Optional[str] = None
+    max_bullets_to_rewrite: int = Field(default=8, ge=0, le=40)
+    upload_tailored_cv: bool = False
+    template: str = "default"
+
+
 class EmployerConfig(BaseModel):
     model_config = StrictModelConfig
 
@@ -187,6 +197,7 @@ class EmployerConfig(BaseModel):
     steps: List[StepConfig] = Field(default_factory=list)
     review_gate: ReviewGateConfig = Field(default_factory=ReviewGateConfig)
     selectors: Dict[str, str] = Field(default_factory=dict)
+    cv_tailoring: CVTailoringConfig = Field(default_factory=CVTailoringConfig)
 
 
 SourceBasis = Literal["profile", "resume", "job_description", "mixed"]
@@ -363,3 +374,148 @@ class ApplicationRunContext(BaseModel):
     def save_json(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.model_dump_json(indent=2), encoding="utf-8")
+
+
+class CVContact(BaseModel):
+    model_config = StrictModelConfig
+
+    full_name: str
+    phone: str
+    email: str
+    linkedin_label: str
+    linkedin_url: str
+
+
+class CVExperienceEntry(BaseModel):
+    model_config = StrictModelConfig
+
+    bullet_id_prefix: str
+    role: str
+    company: str
+    location: Optional[str] = None
+    date_range: str
+    bullets: List[str] = Field(default_factory=list)
+
+    @field_validator("bullets")
+    @classmethod
+    def bullets_must_be_non_empty(cls, value: List[str]) -> List[str]:
+        for bullet in value:
+            if not bullet.strip():
+                raise ValueError("CV bullets must not be empty strings")
+        return value
+
+
+class CVEducationDetail(BaseModel):
+    model_config = StrictModelConfig
+
+    label: str
+    body: str
+
+
+class CVEducationEntry(BaseModel):
+    model_config = StrictModelConfig
+
+    institution: str
+    qualification: str
+    grade: Optional[str] = None
+    date_range: str
+    details: List[CVEducationDetail] = Field(default_factory=list)
+
+
+class CVSkillsLine(BaseModel):
+    model_config = StrictModelConfig
+
+    label: str
+    body: str
+
+
+class CVDocument(BaseModel):
+    model_config = StrictModelConfig
+
+    contact: CVContact
+    experience: List[CVExperienceEntry] = Field(default_factory=list)
+    education: List[CVEducationEntry] = Field(default_factory=list)
+    extracurricular: List[CVExperienceEntry] = Field(default_factory=list)
+    skills_section_title: str = "Skills, Interests & Courses"
+    skills_lines: List[CVSkillsLine] = Field(default_factory=list)
+
+    def iter_bullet_locations(self) -> List["CVBulletLocation"]:
+        out: List[CVBulletLocation] = []
+        for section_name, entries in (("experience", self.experience), ("extracurricular", self.extracurricular)):
+            for entry_index, entry in enumerate(entries):
+                for bullet_index, bullet in enumerate(entry.bullets):
+                    out.append(
+                        CVBulletLocation(
+                            section=section_name,
+                            entry_index=entry_index,
+                            bullet_index=bullet_index,
+                            bullet_id=f"{entry.bullet_id_prefix}-{bullet_index}",
+                            original_text=bullet,
+                            role=entry.role,
+                            company=entry.company,
+                        )
+                    )
+        return out
+
+
+class CVBulletLocation(BaseModel):
+    model_config = StrictModelConfig
+
+    section: Literal["experience", "extracurricular"]
+    entry_index: int
+    bullet_index: int
+    bullet_id: str
+    original_text: str
+    role: str
+    company: str
+
+
+CVTailorSourceBasis = Literal["existing_phrasing", "keyword_substitution", "reordering", "mixed"]
+
+
+class JobKeywordProfile(BaseModel):
+    model_config = StrictModelConfig
+
+    required_keywords: List[str] = Field(default_factory=list)
+    preferred_keywords: List[str] = Field(default_factory=list)
+    exact_phrasings: Dict[str, str] = Field(default_factory=dict)
+    seniority_signals: List[str] = Field(default_factory=list)
+    domain_terms: List[str] = Field(default_factory=list)
+    summary: Optional[str] = None
+
+
+class BulletRewriteProposal(BaseModel):
+    model_config = StrictModelConfig
+
+    bullet_id: str
+    original_text: str
+    proposed_text: str
+    keywords_incorporated: List[str] = Field(default_factory=list)
+    source_basis: CVTailorSourceBasis
+    confidence: float = Field(ge=0.0, le=1.0)
+    requires_manual_review: bool = True
+    notes: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)
+    rejected_reason: Optional[str] = None
+
+    @field_validator("proposed_text")
+    @classmethod
+    def proposed_text_must_not_be_empty(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("proposed_text must not be empty")
+        return value
+
+
+class TailoredCV(BaseModel):
+    model_config = StrictModelConfig
+
+    employer_name: str
+    job_title: Optional[str] = None
+    job_url: str
+    keyword_profile: JobKeywordProfile
+    rewrites: List[BulletRewriteProposal] = Field(default_factory=list)
+    rejected_rewrites: List[BulletRewriteProposal] = Field(default_factory=list)
+    ats_readback_keywords_present: List[str] = Field(default_factory=list)
+    ats_readback_keywords_missing: List[str] = Field(default_factory=list)
+    output_pdf_path: Optional[str] = None
+    report_path: Optional[str] = None

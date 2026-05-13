@@ -1,0 +1,62 @@
+contact:
+  full_name: "Jane Example"
+  phone: "+44 7000 000000"
+  email: "jane@example.com"
+  linkedin_label: "Jane Example"
+  linkedin_url: "https://www.linkedin.com/in/example"
+
+experience:
+  - bullet_id_prefix: "exp-firm-a"
+    role: "Summer Intern (Replace With Team / AUM)"
+    company: "FIRM A"
+    location: "City"
+    date_range: "Month – Month YEAR"
+    bullets:
+      - "Concrete responsibility: action, method, measurable outcome."
+      - "Second bullet with a primary number where possible."
+      - "Third bullet describing scope, ownership, or audience."
+  - bullet_id_prefix: "exp-firm-b"
+    role: "Earlier Internship Title"
+    company: "FIRM B"
+    location: "City"
+    date_range: "Month – Month YEAR"
+    bullets:
+      - "What you built or analysed, in plain language."
+      - "What it informed, and for whom."
+
+education:
+  - institution: "University Name"
+    qualification: "BSc Subject w/ Pathway"
+    grade: "Predicted First Class"
+    date_range: "2022 – 2026"
+    details:
+      - label: "Awards"
+        body: "Concrete awards with one-line context."
+      - label: "Societies"
+        body: "Society A, Society B, Society C"
+  - institution: "School Name"
+    qualification: "Qualification (e.g. IB)"
+    grade: null
+    date_range: "2016 – 2022"
+    details:
+      - label: "Grades"
+        body: "Honors and Distinction, X/Y (subjects)"
+
+extracurricular:
+  - bullet_id_prefix: "extra-club-a"
+    role: "Role Title"
+    company: "Club / Society Name"
+    location: null
+    date_range: "2024 – Present"
+    bullets:
+      - "What you lead, who reads it, what changed because of it."
+      - "Tangible output produced regularly."
+
+skills_section_title: "Skills, Interests & Courses"
+skills_lines:
+  - label: "Interests"
+    body: "Sport A, Sport B, Hobby C"
+  - label: "Certifications"
+    body: "Course A, Course B, Course C"
+  - label: "Languages"
+    body: "English (Native), French (Native), Spanish (Elementary)"

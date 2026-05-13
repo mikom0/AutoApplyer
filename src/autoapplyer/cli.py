@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Optional
 
 from autoapplyer.browser_runner import WorkdayLikeRunner
-from autoapplyer.config import load_employer_config, load_profile, load_writing_profile
+from autoapplyer.config import load_cv_document, load_employer_config, load_profile, load_writing_profile
+from autoapplyer.cv_document import render_cv_pdf
+from autoapplyer.cv_tailor import build_cv_tailor
 from autoapplyer.llm import build_answer_generator
 from autoapplyer.writing_assistant import build_writing_assistant
 
@@ -26,6 +28,27 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_writing = subparsers.add_parser("validate-writing-profile", help="Validate a private writing profile YAML file.")
     validate_writing.add_argument("--writing-profile", required=True, type=Path)
+
+    validate_cv = subparsers.add_parser("validate-cv", help="Validate a structured CV YAML file.")
+    validate_cv.add_argument("--cv", required=True, type=Path)
+
+    render_cv = subparsers.add_parser("render-cv", help="Render a structured CV YAML to PDF without tailoring.")
+    render_cv.add_argument("--cv", required=True, type=Path)
+    render_cv.add_argument("--output", required=True, type=Path)
+    render_cv.add_argument("--template", default="default")
+
+    tailor_cv = subparsers.add_parser("tailor-cv", help="Tailor a structured CV to a job description and render a PDF.")
+    tailor_cv.add_argument("--cv", required=True, type=Path)
+    tailor_cv.add_argument("--employer", required=True, type=Path)
+    tailor_cv.add_argument("--writing-profile", required=True, type=Path)
+    tailor_cv.add_argument(
+        "--provider",
+        choices=["off", "openai"],
+        default=None,
+        help="Provider for CV tailoring. Defaults to AUTOAPPLYER_CV_TAILOR_PROVIDER or off.",
+    )
+    tailor_cv.add_argument("--output-dir", type=Path, default=Path("generated_cvs"))
+    tailor_cv.add_argument("--max-bullets", type=int, default=None, help="Override cv_tailoring.max_bullets_to_rewrite.")
 
     generate_text = subparsers.add_parser("generate-text", help="Generate configured application free-text drafts without opening a browser.")
     generate_text.add_argument("--profile", required=True, type=Path)
@@ -55,6 +78,19 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--close-browser", action="store_true", help="Close the browser at the review gate instead of pausing.")
     run.add_argument("--storage-state", type=Path, default=None, help="Optional Playwright storage state JSON.")
     run.add_argument("--runs-dir", type=Path, default=Path("runs"))
+    run.add_argument("--cv", type=Path, default=None, help="Optional structured CV YAML. Required for tailoring at run time.")
+    run.add_argument(
+        "--cv-tailor-provider",
+        choices=["off", "openai"],
+        default=None,
+        help="Provider for CV tailoring at run time. Defaults to AUTOAPPLYER_CV_TAILOR_PROVIDER or off.",
+    )
+    run.add_argument(
+        "--tailored-cv",
+        type=Path,
+        default=None,
+        help="Path to a pre-rendered tailored CV PDF to upload instead of profile.documents.resume_path.",
+    )
     return parser
 
 
@@ -80,6 +116,44 @@ def main(argv: Optional[list[str]] = None) -> int:
         if args.command == "validate-writing-profile":
             load_writing_profile(args.writing_profile)
             print(f"Writing profile OK: {args.writing_profile}")
+            return 0
+
+        if args.command == "validate-cv":
+            load_cv_document(args.cv)
+            print(f"CV OK: {args.cv}")
+            return 0
+
+        if args.command == "render-cv":
+            cv = load_cv_document(args.cv)
+            output = render_cv_pdf(cv, args.output, template_name=args.template)
+            print(f"Rendered CV to {output}")
+            return 0
+
+        if args.command == "tailor-cv":
+            cv = load_cv_document(args.cv)
+            employer = load_employer_config(args.employer)
+            writing_profile = load_writing_profile(args.writing_profile)
+            provider_name = args.provider or os.getenv("AUTOAPPLYER_CV_TAILOR_PROVIDER", "off")
+            tailor = build_cv_tailor(provider_name, cv, writing_profile, output_dir=args.output_dir)
+
+            from autoapplyer.models import JobApplicationContext
+
+            tailoring_config = employer.cv_tailoring.model_copy()
+            tailoring_config.enabled = True
+            if args.max_bullets is not None:
+                tailoring_config.max_bullets_to_rewrite = args.max_bullets
+            job_context = JobApplicationContext(
+                employer_name=employer.employer_name,
+                job_title=employer.job_title,
+                job_url=employer.application_url,
+                job_description_text=employer.job_description_text,
+            )
+            result = tailor.tailor(job_context, tailoring_config)
+            print(f"Tailored CV PDF: {result.output_pdf_path}")
+            print(f"Report: {result.report_path}")
+            print(f"Accepted rewrites: {len(result.rewrites)}; rejected: {len(result.rejected_rewrites)}")
+            if result.ats_readback_keywords_missing:
+                print(f"Keywords still missing from rendered CV: {', '.join(result.ats_readback_keywords_missing)}")
             return 0
 
         if args.command == "generate-text":
@@ -130,6 +204,33 @@ def main(argv: Optional[list[str]] = None) -> int:
             writing_profile = load_writing_profile(args.writing_profile) if args.writing_profile else None
             writing_provider = args.writing_provider or os.getenv("AUTOAPPLYER_WRITING_PROVIDER", "off")
             writing_assistant = build_writing_assistant(writing_provider, writing_profile)
+
+            tailored_cv_path: Optional[Path] = args.tailored_cv
+            if (
+                tailored_cv_path is None
+                and employer.cv_tailoring.enabled
+                and args.cv is not None
+                and not args.dry_run
+            ):
+                cv_document = load_cv_document(args.cv)
+                cv_tailor_provider = args.cv_tailor_provider or os.getenv("AUTOAPPLYER_CV_TAILOR_PROVIDER", "off")
+                tailor = build_cv_tailor(cv_tailor_provider, cv_document, writing_profile)
+
+                from autoapplyer.models import JobApplicationContext
+
+                job_context = JobApplicationContext(
+                    employer_name=employer.employer_name,
+                    job_title=employer.job_title,
+                    job_url=employer.application_url,
+                    job_description_text=employer.job_description_text,
+                )
+                tailored = tailor.tailor(job_context, employer.cv_tailoring)
+                tailored_cv_path = Path(tailored.output_pdf_path) if tailored.output_pdf_path else None
+                print(f"Tailored CV PDF: {tailored_cv_path}")
+                print(f"Tailoring report: {tailored.report_path}")
+                if tailored.ats_readback_keywords_missing:
+                    print(f"Keywords still missing: {', '.join(tailored.ats_readback_keywords_missing)}")
+
             runner = WorkdayLikeRunner(
                 profile=profile,
                 employer_config=employer,
@@ -142,6 +243,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 storage_state=args.storage_state,
                 keep_open=not args.close_browser,
                 artifacts_dir=args.runs_dir,
+                resume_path_override=tailored_cv_path,
             )
             context = runner.run()
             print(f"Run saved: {context.artifact_paths.get('run_json')}")

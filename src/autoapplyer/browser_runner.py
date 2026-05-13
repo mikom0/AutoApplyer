@@ -42,6 +42,7 @@ class WorkdayLikeRunner:
         storage_state: Optional[Path] = None,
         keep_open: bool = True,
         artifacts_dir: Path = Path("runs"),
+        resume_path_override: Optional[Path] = None,
     ):
         self.profile = profile
         self.employer_config = employer_config
@@ -54,6 +55,7 @@ class WorkdayLikeRunner:
         self.storage_state = storage_state
         self.keep_open = keep_open
         self.artifacts_dir = artifacts_dir
+        self.resume_path_override = resume_path_override
         self.resolver = FieldResolver(profile, employer_config)
         self._filled_keys: Set[str] = set()
         self._resume_uploaded = False
@@ -421,7 +423,12 @@ class WorkdayLikeRunner:
     def _attempt_resume_upload(self, page, run_context: ApplicationRunContext) -> None:
         if self._resume_uploaded:
             return
-        resume_path = resolve_local_path(Path.cwd(), self.profile.documents.resume_path)
+        if self.resume_path_override is not None:
+            resume_path = self.resume_path_override
+            if not resume_path.is_absolute():
+                resume_path = resolve_local_path(Path.cwd(), str(resume_path))
+        else:
+            resume_path = resolve_local_path(Path.cwd(), self.profile.documents.resume_path)
         if not resume_path.exists():
             run_context.add_event(
                 FieldEvent(

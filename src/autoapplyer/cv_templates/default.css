@@ -1,0 +1,145 @@
+@page {
+  size: A4;
+  margin: 12mm 14mm 10mm 14mm;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Cambria", "Charter", "Constantia", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  font-size: 10pt;
+  color: #111;
+  line-height: 1.2;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.cv {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 2pt;
+}
+
+.name {
+  font-size: 24pt;
+  font-weight: 700;
+  letter-spacing: -0.2pt;
+  margin: 0;
+  line-height: 1.05;
+}
+
+.contact-line {
+  font-size: 11pt;
+  font-weight: 700;
+  margin-top: 2pt;
+  margin-bottom: 4pt;
+}
+
+.contact-line a {
+  color: #111;
+  text-decoration: underline;
+}
+
+.section {
+  margin-top: 4pt;
+}
+
+.section-header {
+  font-size: 14pt;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.section-rule {
+  border: none;
+  border-top: 1px dotted #b5b5b5;
+  margin: 1pt 0 3pt 0;
+}
+
+.entry {
+  margin-top: 3pt;
+}
+
+.entry-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8pt;
+  font-weight: 700;
+}
+
+.entry-title {
+  flex: 1;
+}
+
+.entry-location {
+  font-style: italic;
+  font-weight: 700;
+}
+
+.entry-dates {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+ul.bullets {
+  margin: 1pt 0 0 0;
+  padding-left: 15pt;
+  list-style: disc outside;
+}
+
+ul.bullets li {
+  margin: 0.5pt 0;
+  padding-left: 1pt;
+}
+
+.education-entry {
+  margin-top: 3pt;
+}
+
+.education-title {
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8pt;
+}
+
+.education-title .grade {
+  font-style: italic;
+}
+
+.education-details {
+  margin: 1pt 0 0 14pt;
+}
+
+.education-detail {
+  margin: 0.5pt 0;
+}
+
+.education-detail .label {
+  font-weight: 700;
+}
+
+.skills-block {
+  margin-top: 2pt;
+}
+
+.skills-line {
+  margin: 0.5pt 0;
+}
+
+.skills-line .label {
+  font-weight: 700;
+}
+
+p {
+  margin: 0;
+}

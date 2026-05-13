@@ -52,6 +52,14 @@ AutoApplyer is structured as a local, human-in-the-loop job application assistan
    - Each run records employer, job URL/title when known, filled fields, generated answers, unresolved fields, and artifact paths.
    - Context is saved as JSON under `runs/`.
 
+8. **Structured CV and per-employer tailoring**
+   - `cv.private.yml` stores the CV as structured content (contact, experience, education, extracurricular, skills lines).
+   - `autoapplyer/cv_document.py` renders the CV via an HTML + CSS template under `cv_templates/` to a PDF using Playwright's print-to-PDF, producing a layout that matches the original static CV.
+   - `autoapplyer/cv_tailor.py` runs two LLM steps behind a `CVTailorProvider` ABC: a keyword analyzer that turns the JD into a `JobKeywordProfile`, and a bullet rewriter that proposes one rewrite per ranked bullet.
+   - Each rewrite passes a lint pass that rejects banned phrases, em dashes, overgrowth beyond 15 percent in length, mismatched original text, and flags new tokens that look like fabricated tools, languages, employers, or metrics by cross-referencing `writing_profile.claim_rules.never_invent`.
+   - Tailored CVs and a markdown report (keyword profile, accepted rewrites, rejected rewrites, ATS readback) are saved under ignored `generated_cvs/`.
+   - The browser runner uses the tailored PDF as the upload when `cv_tailoring.enabled` is true, otherwise it falls back to `profile.documents.resume_path`. The manual review gate still applies.
+
 ## MVP Scope
 
 - Python package layout with `pyproject.toml`.
@@ -75,10 +83,12 @@ AutoApplyer is structured as a local, human-in-the-loop job application assistan
 - CAPTCHA handling of any kind.
 - Bot-detection evasion, stealth plugins, proxies, or automated final submission.
 - Full Workday account creation/sign-in orchestration.
-- Rich resume parsing and job description extraction.
 - Multi-employer batch execution.
 - Persistent answer cache beyond a simple ignored cache directory.
 - End-to-end browser CI against live sites.
+- Multi-page CV layouts; current renderer assumes a single A4 page.
+- Alternative CV templates beyond `default`; the template loader is in place but only one template ships.
+- Section-level reordering during tailoring; the rewriter only edits bullet text, not entry order or which entries appear.
 
 ## Implementation Stages
 

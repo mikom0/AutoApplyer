@@ -29,7 +29,7 @@ autoapplyer = "autoapplyer.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-autoapplyer = ["prompts/*.md"]
+autoapplyer = ["prompts/*.md", "cv_templates/*.css", "cv_templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
