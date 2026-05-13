@@ -145,6 +145,40 @@ autoapplyer generate-text \
   --employer employers/walker_hamill_graduate_investment_associate.yml
 ```
 
+## One-Shot Apply From A URL
+
+The fastest way to apply to a single role. Pass the job URL, and AutoApplyer
+will: scrape the JD from the page, tailor the CV to it, then start the
+headed application flow with the tailored PDF as the upload. It still stops
+at the manual review gate.
+
+```bash
+AUTOAPPLYER_CV_TAILOR_PROVIDER=openai \
+autoapplyer apply "https://acme.wd1.myworkdayjobs.com/External/job/.../Analyst" \
+  --profile profile.private.yml \
+  --cv cv.private.yml \
+  --writing-profile writing_profile.private.yml \
+  --provider openai
+```
+
+Steps under the hood:
+
+1. Opens the URL in a brief headed Chromium window, extracts the JD using
+   Workday/Greenhouse/Lever selectors with a body-text fallback, then closes.
+2. Builds an in-memory employer config (Workday defaults, tailoring enabled).
+3. Runs the keyword analyzer and bullet rewriter; saves the tailored PDF and
+   markdown report under `generated_cvs/`.
+4. Opens the apply flow headed at the same URL with the tailored CV.
+
+Useful flags:
+
+- `--dry-run`: tailor only, do not start the headed apply flow.
+- `--job-description-file path/to/jd.txt`: skip the scraper and use a local
+  JD file instead. Useful for sites that block headless scraping or hide the
+  JD behind interactive flows.
+- `--scrape-headless`: scrape without showing the browser.
+- `--max-bullets N`: how many bullets the rewriter is allowed to touch.
+
 ## Structured CV And Tailoring
 
 `CV Miko Matheron.pdf` is the static fallback. For per-employer tailoring, the CV

@@ -11,6 +11,7 @@ from autoapplyer.browser_runner import WorkdayLikeRunner
 from autoapplyer.config import load_cv_document, load_employer_config, load_profile, load_writing_profile
 from autoapplyer.cv_document import render_cv_pdf
 from autoapplyer.cv_tailor import build_cv_tailor
+from autoapplyer.job_scraper import scrape_job_posting
 from autoapplyer.llm import build_answer_generator
 from autoapplyer.writing_assistant import build_writing_assistant
 
@@ -77,6 +78,42 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--headless", action="store_true", help="Run browser headless. Headed is the default.")
     run.add_argument("--close-browser", action="store_true", help="Close the browser at the review gate instead of pausing.")
     run.add_argument("--storage-state", type=Path, default=None, help="Optional Playwright storage state JSON.")
+    apply_cmd = subparsers.add_parser(
+        "apply",
+        help="One-shot: scrape JD from a URL, tailor the CV, then run the headed apply flow.",
+    )
+    apply_cmd.add_argument("url", help="Job posting URL.")
+    apply_cmd.add_argument("--profile", required=True, type=Path)
+    apply_cmd.add_argument("--cv", required=True, type=Path)
+    apply_cmd.add_argument("--writing-profile", required=True, type=Path)
+    apply_cmd.add_argument(
+        "--provider",
+        choices=["off", "openai"],
+        default=None,
+        help="Provider for CV tailoring. Defaults to AUTOAPPLYER_CV_TAILOR_PROVIDER or off.",
+    )
+    apply_cmd.add_argument(
+        "--writing-provider",
+        choices=["off", "openai"],
+        default=None,
+        help="Provider for dedicated application writing. Defaults to AUTOAPPLYER_WRITING_PROVIDER or off.",
+    )
+    apply_cmd.add_argument("--max-bullets", type=int, default=8)
+    apply_cmd.add_argument(
+        "--job-description-file",
+        type=Path,
+        default=None,
+        help="Override scraper: read JD from this file instead of fetching the URL.",
+    )
+    apply_cmd.add_argument("--llm-mode", choices=["off", "suggest_only", "autofill_with_review"], default=None)
+    apply_cmd.add_argument("--dry-run", action="store_true", help="Tailor only; do not start the headed apply flow.")
+    apply_cmd.add_argument("--headless", action="store_true", help="Run the application flow headless. Headed is the default.")
+    apply_cmd.add_argument("--scrape-headless", action="store_true", help="Scrape headless. Default is headed with auto-close.")
+    apply_cmd.add_argument("--close-browser", action="store_true", help="Close the apply browser at the review gate instead of pausing.")
+    apply_cmd.add_argument("--storage-state", type=Path, default=None)
+    apply_cmd.add_argument("--runs-dir", type=Path, default=Path("runs"))
+    apply_cmd.add_argument("--output-dir", type=Path, default=Path("generated_cvs"))
+
     run.add_argument("--runs-dir", type=Path, default=Path("runs"))
     run.add_argument("--cv", type=Path, default=None, help="Optional structured CV YAML. Required for tailoring at run time.")
     run.add_argument(
@@ -154,6 +191,95 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f"Accepted rewrites: {len(result.rewrites)}; rejected: {len(result.rejected_rewrites)}")
             if result.ats_readback_keywords_missing:
                 print(f"Keywords still missing from rendered CV: {', '.join(result.ats_readback_keywords_missing)}")
+            return 0
+
+        if args.command == "apply":
+            from autoapplyer.models import CVTailoringConfig, EmployerConfig, JobApplicationContext
+
+            profile = load_profile(args.profile)
+            cv = load_cv_document(args.cv)
+            writing_profile = load_writing_profile(args.writing_profile)
+
+            if args.job_description_file:
+                if not args.job_description_file.exists():
+                    raise RuntimeError(f"job description file not found: {args.job_description_file}")
+                jd_text = args.job_description_file.read_text(encoding="utf-8")
+                employer_name = _employer_from_url(args.url)
+                job_title = None
+                scrape_warnings: list[str] = []
+                print(f"Using JD from file: {args.job_description_file}")
+            else:
+                print(f"Scraping job posting: {args.url}")
+                scraped = scrape_job_posting(args.url, headed=not args.scrape_headless)
+                jd_text = scraped.job_description_text
+                employer_name = scraped.employer_name
+                job_title = scraped.job_title
+                scrape_warnings = scraped.warnings
+                print(f"Scraped employer: {employer_name}")
+                print(f"Scraped title:    {job_title or '(none)'}")
+                print(f"JD chars: {len(jd_text)} (selector: {scraped.extraction_selector})")
+                for warning in scrape_warnings:
+                    print(f"Scrape warning: {warning}")
+                if len(jd_text.strip()) < 200:
+                    raise RuntimeError(
+                        "Scraped JD is too short to tailor against. Re-run with "
+                        "--job-description-file path/to/jd.txt to provide the text manually."
+                    )
+
+            employer = EmployerConfig(
+                employer_name=employer_name,
+                ats_family="workday_like",
+                application_url=args.url,
+                job_title=job_title,
+                job_description_text=jd_text,
+                cv_tailoring=CVTailoringConfig(
+                    enabled=True,
+                    max_bullets_to_rewrite=args.max_bullets,
+                ),
+            )
+
+            provider_name = args.provider or os.getenv("AUTOAPPLYER_CV_TAILOR_PROVIDER", "off")
+            tailor = build_cv_tailor(provider_name, cv, writing_profile, output_dir=args.output_dir)
+            job_context = JobApplicationContext(
+                employer_name=employer.employer_name,
+                job_title=employer.job_title,
+                job_url=employer.application_url,
+                job_description_text=employer.job_description_text,
+            )
+            tailored = tailor.tailor(job_context, employer.cv_tailoring)
+            print(f"Tailored CV PDF: {tailored.output_pdf_path}")
+            print(f"Report: {tailored.report_path}")
+            print(f"Accepted rewrites: {len(tailored.rewrites)}; rejected: {len(tailored.rejected_rewrites)}")
+            if tailored.ats_readback_keywords_missing:
+                print(f"Keywords still missing: {', '.join(tailored.ats_readback_keywords_missing)}")
+
+            if args.dry_run:
+                print("Dry run: tailoring complete, skipping headed apply flow.")
+                return 0
+
+            llm_mode = args.llm_mode or "off"
+            answer_generator = build_answer_generator(llm_mode)
+            writing_provider = args.writing_provider or os.getenv("AUTOAPPLYER_WRITING_PROVIDER", "off")
+            writing_assistant = build_writing_assistant(writing_provider, writing_profile)
+
+            runner = WorkdayLikeRunner(
+                profile=profile,
+                employer_config=employer,
+                employer_config_path=args.cv,
+                answer_generator=answer_generator,
+                writing_assistant=writing_assistant,
+                llm_mode=llm_mode,
+                dry_run=False,
+                headed=not args.headless,
+                storage_state=args.storage_state,
+                keep_open=not args.close_browser,
+                artifacts_dir=args.runs_dir,
+                resume_path_override=Path(tailored.output_pdf_path) if tailored.output_pdf_path else None,
+            )
+            context = runner.run()
+            print(f"Run saved: {context.artifact_paths.get('run_json')}")
+            print_application_checklist(context)
+            print("Stopped before final submission. Manual review is required.")
             return 0
 
         if args.command == "generate-text":
@@ -257,6 +383,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         logging.getLogger(__name__).exception("Command failed")
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+
+
+def _employer_from_url(url: str) -> str:
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).hostname or "").lower()
+    if not host:
+        return "Unknown Employer"
+    if ".myworkdayjobs.com" in host:
+        return host.split(".")[0].replace("-", " ").title()
+    parts = host.split(".")
+    if len(parts) >= 2:
+        return parts[-2].replace("-", " ").title()
+    return host
 
 
 def print_application_checklist(context) -> None:
