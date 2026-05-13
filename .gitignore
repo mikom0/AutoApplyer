@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Local secrets and private profile data
+.env
+profile.private.yml
+writing_profile.private.yml
+profiles/*.private.yml
+*.pdf
+
+# Browser auth/session state
+.auth/
+storage-state*.json
+playwright/.auth/
+
+# Runtime artifacts
+runs/
+screenshots/
+traces/
+artifacts/
+llm_cache/
+generated_messages/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/

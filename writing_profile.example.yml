@@ -1,0 +1,71 @@
+applicant_summary: |
+  Replace this with a short first-person summary of your background. Include only claims you are comfortable reusing in applications.
+
+academic_background:
+  safe_points:
+    - ""
+  do_not_claim_unless_job_context_confirms:
+    - "tier 1 academics"
+    - "STEM degree"
+    - "specific grades"
+
+relevant_experience:
+  safe_points:
+    - ""
+  evidence_points:
+    - claim: ""
+      basis: "CV/profile"
+      allowed_contexts:
+        - "investment"
+        - "technology"
+        - "research"
+
+sector_interests:
+  - "venture capital"
+  - "technology"
+  - "AI/data"
+
+role_interests:
+  - "origination"
+  - "founder conversations"
+  - "research and analysis"
+
+writing_voice:
+  preferred_style:
+    - "concise"
+    - "warm"
+    - "specific"
+    - "direct"
+  avoid_phrases:
+    - "thrilled to apply"
+    - "excited to apply"
+    - "esteemed firm"
+    - "dynamic environment"
+    - "passionate about innovation"
+    - "leveraging my diverse skill set"
+    - "my background aligns well"
+  cadence_rules:
+    - "Vary sentence length."
+    - "Avoid rule-of-three rhythm."
+    - "Avoid em dashes."
+
+claim_rules:
+  safe_to_make_without_job_confirmation:
+    - ""
+  never_invent:
+    - "employers"
+    - "grades"
+    - "deal experience"
+    - "financial modelling experience"
+    - "metrics"
+    - "languages"
+    - "technical tools"
+    - "visa status"
+
+application_preferences:
+  recruiter_message_words:
+    - 120
+    - 220
+  default_tone: "polished but not formal"
+  prefer_concrete_fit_over_enthusiasm: true
+  include_manual_review_note: true

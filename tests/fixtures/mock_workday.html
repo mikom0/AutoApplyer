@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock Workday Application</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 760px; }
+      section { display: none; }
+      section.active { display: block; }
+      label { display: block; margin: 0.8rem 0; }
+      input, textarea, select { display: block; width: 100%; max-width: 520px; padding: 0.45rem; }
+      .actions { margin-top: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Example Role</h1>
+    <form>
+      <section class="active" data-step="0">
+        <h2>Personal Information</h2>
+        <label>Full Name <input name="full_name" /></label>
+        <label>Email <input name="email" type="email" /></label>
+        <label>Phone <input name="phone" /></label>
+        <label>LinkedIn <input name="linkedin" /></label>
+        <div class="actions"><button type="button" onclick="nextStep()">Next</button></div>
+      </section>
+
+      <section data-step="1">
+        <h2>Documents</h2>
+        <label>Resume <input name="resume" type="file" /></label>
+        <div class="actions"><button type="button" onclick="nextStep()">Next</button></div>
+      </section>
+
+      <section data-step="2">
+        <h2>Questions</h2>
+        <label>Are you authorized to work in this country?
+          <select name="authorized">
+            <option value="">Select one</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </label>
+        <label>Will you now or in the future require sponsorship?
+          <select name="sponsorship">
+            <option value="">Select one</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </label>
+        <label>Why are you interested in this role?
+          <textarea name="why" maxlength="500"></textarea>
+        </label>
+        <div class="actions"><button type="button" onclick="nextStep()">Review</button></div>
+      </section>
+
+      <section data-step="3">
+        <h2>Review</h2>
+        <p>Please review your application before submitting.</p>
+        <button type="submit">Submit Application</button>
+      </section>
+    </form>
+
+    <script>
+      function nextStep() {
+        const current = document.querySelector("section.active");
+        const next = current.nextElementSibling;
+        if (!next) return;
+        current.classList.remove("active");
+        next.classList.add("active");
+      }
+    </script>
+  </body>
+</html>

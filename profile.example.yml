@@ -1,0 +1,46 @@
+personal:
+  full_name: "Miko Matheron"
+  preferred_name: "Miko"
+  email: "miko@example.com"
+  phone: "+44 7000 000000"
+  city: "London"
+  region: "England"
+  country: "United Kingdom"
+  linkedin: "https://www.linkedin.com/in/example"
+  portfolio: "https://example.com"
+  github: "https://github.com/example"
+
+work_authorization:
+  country: "United Kingdom"
+  requires_sponsorship: false
+  authorized_to_work: true
+  visa_status: null
+
+application_defaults:
+  notice_period: "One month"
+  available_start_date: null
+  desired_salary: null
+  salary_currency: "GBP"
+  willing_to_relocate: false
+  remote_preference: "hybrid"
+  employment_type_preferences:
+    - "full-time"
+
+documents:
+  resume_path: "CV Miko Matheron.pdf"
+  cover_letter_path: null
+
+standard_answers:
+  why_interested_generic: "I am interested in roles where I can contribute strong product engineering, automation, and AI-assisted workflow skills."
+  work_authorization_answer: "I am authorized to work in the United Kingdom."
+  sponsorship_answer: "I do not require sponsorship."
+  salary_answer: null
+  relocation_answer: "I am open to discussing relocation depending on the role and location."
+
+sensitive_optional_answers:
+  gender: null
+  ethnicity: null
+  disability_status: null
+  veteran_status: null
+  pronouns: null
+

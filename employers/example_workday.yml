@@ -1,0 +1,95 @@
+employer_name: "Example Workday Employer"
+ats_family: "workday_like"
+application_url: "file://tests/fixtures/mock_workday.html"
+job_title: "Example Role"
+job_description_text: null
+job_description_url: null
+
+llm_mode: "off"
+
+free_text_fields:
+  - label_match:
+      - "Message"
+      - "Cover Letter"
+      - "Why are you interested in this role?"
+      - "Supporting Statement"
+      - "Additional Information"
+    type: "recruiter_message"
+    generation:
+      enabled: false
+      max_words: 220
+      insert_into_form: true
+
+label_aliases:
+  personal.full_name:
+    - "Legal Name"
+    - "Full Name"
+    - "Name"
+  personal.email:
+    - "Email Address"
+    - "Email"
+  personal.phone:
+    - "Phone Number"
+    - "Mobile Phone"
+  personal.linkedin:
+    - "LinkedIn Profile"
+  personal.github:
+    - "GitHub"
+  application_defaults.notice_period:
+    - "Notice Period"
+  application_defaults.remote_preference:
+    - "Remote Preference"
+  standard_answers.why_interested_generic:
+    - "Why are you interested in this role?"
+
+field_mappings:
+  - labels: ["Full Name"]
+    profile_path: "personal.full_name"
+  - labels: ["Email"]
+    profile_path: "personal.email"
+  - labels: ["Phone"]
+    profile_path: "personal.phone"
+  - labels: ["LinkedIn"]
+    profile_path: "personal.linkedin"
+  - labels: ["Are you authorized to work in this country?"]
+    profile_path: "work_authorization.authorized_to_work"
+  - labels: ["Will you now or in the future require sponsorship?"]
+    profile_path: "work_authorization.requires_sponsorship"
+  - labels: ["Why are you interested in this role?"]
+    profile_path: "standard_answers.why_interested_generic"
+    llm_allowed: true
+    max_chars: 500
+
+resume_upload:
+  label_aliases:
+    - "Resume"
+    - "CV"
+    - "Upload Resume"
+    - "Upload CV"
+  selectors:
+    - "input[type='file']"
+
+steps:
+  - name: "Personal Information"
+    next_button_text:
+      - "Next"
+      - "Continue"
+  - name: "Documents"
+    next_button_text:
+      - "Next"
+      - "Continue"
+  - name: "Questions"
+    next_button_text:
+      - "Review"
+      - "Next"
+
+review_gate:
+  stop_texts:
+    - "Review"
+    - "Submit Application"
+    - "Submit"
+  submit_texts:
+    - "Submit"
+    - "Submit Application"
+    - "Send Application"
+  require_manual_review: true

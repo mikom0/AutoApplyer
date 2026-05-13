@@ -1,0 +1,36 @@
+employer_name: "Walker Hamill"
+ats_family: "generic_form"
+application_url: "https://www.walkerhamill.com/job/dm53488-investment-associate/"
+job_title: "Investment Associate"
+job_description_url: "https://www.walkerhamill.com/job/dm53488-investment-associate/"
+job_description_text: |
+  Walker Hamill describes this as an Investment Associate role with a well known generalist Private Equity fund in Frankfurt. The role is involved across the transaction cycle, including origination, execution, portfolio management, and exit, with emphasis on active ownership, operational involvement, German business proficiency, analytical and technical skills, strategic thinking, commercial judgement, and an entrepreneurial international mindset.
+
+llm_mode: "off"
+start_button_texts:
+  - "Apply for job"
+  - "Apply"
+
+field_mappings:
+  - labels: ["Full name"]
+    profile_path: "personal.full_name"
+  - labels: ["Email address"]
+    profile_path: "personal.email"
+
+free_text_fields:
+  - label_match:
+      - "Message"
+    type: "recruiter_message"
+    generation:
+      enabled: true
+      max_words: 220
+      insert_into_form: true
+
+review_gate:
+  stop_texts:
+    - "Submit"
+    - "Send"
+  submit_texts:
+    - "Submit"
+    - "Send"
+  require_manual_review: true

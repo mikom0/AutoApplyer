@@ -1,0 +1,35 @@
+employer_name: "Walker Hamill"
+ats_family: "generic_form"
+application_url: "https://www.walkerhamill.com/job/graduate-investment-associate/"
+job_title: "Graduate Investment Associate"
+job_description_url: "https://www.walkerhamill.com/job/graduate-investment-associate/"
+job_description_text: |
+  Our client is a British venture capital firm focused on technology. They lead pre-seed and seed rounds with investments of up to c. £3m and have almost £150m AUM. The Graduate Investment Associate will support origination by identifying emergent businesses suitable for investment, speaking with founders, running research and analysis, and building a network among founders and sector leaders. The role also involves supporting senior leaders with projects including development of the firm’s data platform, founder and ecosystem events, and investor relations/reporting. The firm is looking for recent or upcoming graduates with strong academics, ideally in STEM, and a clear interest in technology, AI, and data.
+
+llm_mode: "off"
+start_button_texts:
+  - "Apply for job"
+
+field_mappings:
+  - labels: ["Full name"]
+    profile_path: "personal.full_name"
+  - labels: ["Email address"]
+    profile_path: "personal.email"
+
+free_text_fields:
+  - label_match:
+      - "Message"
+    type: "recruiter_message"
+    generation:
+      enabled: true
+      max_words: 220
+      insert_into_form: true
+
+review_gate:
+  stop_texts:
+    - "Submit"
+    - "Send"
+  submit_texts:
+    - "Submit"
+    - "Send"
+  require_manual_review: true
