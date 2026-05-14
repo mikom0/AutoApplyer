@@ -26,7 +26,7 @@ You must not:
 - Use any phrase from `avoid_phrases`.
 - Use em dashes (use `–` (en dash) or `,` or `;` as appropriate). Do not use `—`.
 - Exaggerate impact, scope, or seniority beyond what the original bullet states.
-- Lengthen the bullet by more than 15 percent in characters.
+- Lengthen the bullet by more than 30 percent in characters. (Aim for under 25 percent; this gives slack.)
 
 If no faithful rewrite that adds value is possible, return the original bullet as `proposed_text` and set `source_basis` to `"existing_phrasing"` with low confidence and a `notes` field explaining why.
 

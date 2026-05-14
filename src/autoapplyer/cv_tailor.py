@@ -266,8 +266,8 @@ def _lint_bullet_proposal(
     if "—" in proposed:
         return _LintVerdict("proposed text contains em dash, which is banned", warnings)
 
-    if len(proposed) > int(len(original) * 1.15) + 4:
-        return _LintVerdict("proposed text exceeds 15% length growth budget", warnings)
+    if len(proposed) > int(len(original) * 1.40) + 4:
+        return _LintVerdict("proposed text exceeds 40% length growth budget", warnings)
 
     if writing_profile:
         lowered = proposed.lower()
@@ -310,20 +310,26 @@ _NEVER_INVENT_HINTS: Dict[str, List[str]] = {
 def _token_is_in_category(token: str, category: str) -> bool:
     hints = _NEVER_INVENT_HINTS.get(category, [])
     for hint in hints:
-        if hint.startswith("\\") or any(c in hint for c in "%\\d"):
+        if any(c in hint for c in r"\%d"):
             if re.search(hint, token):
                 return True
-        elif hint in token:
+        elif hint == token:
             return True
     return False
 
 
 _TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9+/&.-]*")
+_TRAILING_PUNCT = ".,;:-/"
 
 
 def _content_tokens(text: str) -> set[str]:
     stop = {"and", "the", "a", "an", "of", "in", "to", "for", "on", "with", "by", "at", "as", "is", "are", "was", "were", "be"}
-    return {t.lower() for t in _TOKEN_PATTERN.findall(text) if t.lower() not in stop and len(t) > 1}
+    tokens: set[str] = set()
+    for raw in _TOKEN_PATTERN.findall(text):
+        token = raw.lower().rstrip(_TRAILING_PUNCT)
+        if len(token) > 1 and token not in stop:
+            tokens.add(token)
+    return tokens
 
 
 def _rank_bullets_for_rewrite(

@@ -88,7 +88,7 @@ def test_lint_rejects_overgrowth():
     )
     writing_profile = load_writing_profile(ROOT / "writing_profile.example.yml")
     verdict = _lint_bullet_proposal(proposal, location, _kw_profile(), writing_profile)
-    assert verdict.rejected_reason and "15%" in verdict.rejected_reason
+    assert verdict.rejected_reason and "40%" in verdict.rejected_reason
 
 
 def test_lint_rejects_mismatched_original_text():

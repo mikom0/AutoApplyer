@@ -35,6 +35,10 @@ _TITLE_SELECTORS: List[str] = [
 
 _EMPLOYER_HINTS_FROM_TITLE = re.compile(r"^(.+?)\s*[\|\-–]\s*(.+)$")
 _WORKDAY_SUBDOMAIN = re.compile(r"^(?P<sub>[^.]+)\.(?P<region>wd\d+)\.myworkdayjobs\.com$")
+_PERSONIO_SUBDOMAIN = re.compile(r"^(?P<sub>[^.]+)\.jobs\.personio\.com$")
+_GREENHOUSE_HOST = re.compile(r"^(?:boards\.)?greenhouse\.io$")
+_LEVER_HOST = re.compile(r"^jobs\.lever\.co$")
+_EMPLOYER_PREFIX_TRIM = re.compile(r"^(?:jobs at|careers at|open roles at|work at)\s+", re.IGNORECASE)
 
 
 class ScrapedJobPosting(BaseModel):
@@ -108,25 +112,32 @@ def _extract_first_nonempty(page, selectors: List[str], min_chars: int) -> tuple
 
 
 def _infer_employer(url: str, page_title: str, job_title: Optional[str]) -> str:
-    host = urlparse(url).hostname or ""
+    host = (urlparse(url).hostname or "").lower()
     workday = _WORKDAY_SUBDOMAIN.match(host)
     if workday:
         return workday.group("sub").replace("-", " ").title()
+    personio = _PERSONIO_SUBDOMAIN.match(host)
+    if personio:
+        return personio.group("sub").replace("-", " ").title()
 
     if page_title:
         match = _EMPLOYER_HINTS_FROM_TITLE.match(page_title)
         if match:
             left, right = match.group(1).strip(), match.group(2).strip()
             if job_title and job_title.lower() in left.lower():
-                return right
+                return _clean_employer(right)
             if job_title and job_title.lower() in right.lower():
-                return left
-            return right
+                return _clean_employer(left)
+            return _clean_employer(right)
 
     host_parts = host.split(".")
     if len(host_parts) >= 2:
         return host_parts[-2].replace("-", " ").title()
     return "Unknown Employer"
+
+
+def _clean_employer(name: str) -> str:
+    return _EMPLOYER_PREFIX_TRIM.sub("", name).strip() or name
 
 
 def _job_title_from_page_title(page_title: str) -> Optional[str]:
