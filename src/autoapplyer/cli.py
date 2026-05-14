@@ -232,6 +232,13 @@ def main(argv: Optional[list[str]] = None) -> int:
                 application_url=args.url,
                 job_title=job_title,
                 job_description_text=jd_text,
+                start_button_texts=[
+                    "Apply for this job",
+                    "Apply now",
+                    "Apply",
+                    "I'm interested",
+                    "Start application",
+                ],
                 cv_tailoring=CVTailoringConfig(
                     enabled=True,
                     max_bullets_to_rewrite=args.max_bullets,

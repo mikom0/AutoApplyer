@@ -131,6 +131,7 @@ class WorkdayLikeRunner:
             self._click_form_opener(page, run_context)
             self._attempt_resume_upload(page, run_context)
             self._attempt_free_text_fields(page, run_context)
+            self._attempt_auto_detect_fields(page, run_context)
             self._attempt_configured_fields(page, run_context, self.employer_config.field_mappings)
             self._raise_if_submit_visible(page, run_context)
             run_context.add_event(
@@ -143,11 +144,12 @@ class WorkdayLikeRunner:
             )
             return
 
+        self._click_form_opener(page, run_context)
         max_steps = max(len(self.employer_config.steps), 1) + 5
         for step_index in range(max_steps):
-            self._raise_if_submit_visible(page, run_context)
             self._attempt_resume_upload(page, run_context)
             self._attempt_free_text_fields(page, run_context)
+            self._attempt_auto_detect_fields(page, run_context)
             self._attempt_configured_fields(page, run_context, self.employer_config.field_mappings)
             if step_index < len(self.employer_config.steps):
                 self._attempt_configured_fields(page, run_context, self.employer_config.steps[step_index].field_mappings)
@@ -174,6 +176,53 @@ class WorkdayLikeRunner:
                 message="Maximum step count reached before a submit boundary was found.",
             )
         )
+
+    def _attempt_auto_detect_fields(self, page, run_context: ApplicationRunContext) -> None:
+        try:
+            label_locators = page.locator("label").all()
+        except Exception as exc:
+            logger.debug("Could not enumerate labels: %s", exc)
+            return
+
+        name_parts = (self.profile.personal.full_name or "").split(None, 1)
+        first_name = name_parts[0] if name_parts else ""
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        name_aliases = {
+            "first name": first_name,
+            "firstname": first_name,
+            "given name": first_name,
+            "last name": last_name,
+            "lastname": last_name,
+            "surname": last_name,
+            "family name": last_name,
+        }
+
+        for label_locator in label_locators:
+            try:
+                if not label_locator.is_visible():
+                    continue
+                text = (label_locator.text_content() or "").strip()
+                if not text or len(text) > 80:
+                    continue
+                normalized = normalize_label(text)
+                if not normalized or normalized in self._filled_keys:
+                    continue
+
+                resolved = self.resolver.resolve_label(text)
+                if not resolved and normalized in name_aliases and name_aliases[normalized]:
+                    resolved = ResolvedField(
+                        label=text,
+                        value=name_aliases[normalized],
+                        source="alias",
+                        profile_path="personal.full_name",
+                    )
+                if not resolved:
+                    continue
+
+                if self._fill_any_label(page, [text], resolved, run_context):
+                    self._filled_keys.add(normalized)
+            except Exception as exc:
+                logger.debug("Auto-detect skip for label: %s", exc)
 
     def _attempt_configured_fields(
         self,
@@ -508,23 +557,28 @@ class WorkdayLikeRunner:
                 )
                 return
             pattern = re.compile(re.escape(text), re.IGNORECASE)
-            button = page.get_by_role("button", name=pattern).first
-            try:
-                if button.count() and button.is_visible() and button.is_enabled():
-                    button.click()
-                    page.wait_for_timeout(700)
-                    run_context.add_event(
-                        FieldEvent(
-                            label=text,
-                            status="clicked",
-                            source="system",
-                            message="Clicked configured form opener to reveal the application fields.",
+            for role in ("button", "link"):
+                candidate = page.get_by_role(role, name=pattern).first
+                try:
+                    if candidate.count() and candidate.is_visible() and candidate.is_enabled():
+                        candidate.click()
+                        try:
+                            page.wait_for_load_state("domcontentloaded", timeout=4000)
+                        except Exception:
+                            pass
+                        page.wait_for_timeout(1200)
+                        run_context.add_event(
+                            FieldEvent(
+                                label=text,
+                                status="clicked",
+                                source="system",
+                                message=f"Clicked form opener ({role}) to reveal the application fields.",
+                            )
                         )
-                    )
-                    logger.info("Clicked form opener %s", text)
-                    return
-            except Exception as exc:
-                logger.debug("Could not click form opener %s: %s", text, exc)
+                        logger.info("Clicked form opener %s (%s)", text, role)
+                        return
+                except Exception as exc:
+                    logger.debug("Could not click form opener %s (%s): %s", text, role, exc)
 
     def _raise_if_submit_visible(self, page, run_context: ApplicationRunContext) -> bool:
         for text in self.employer_config.review_gate.submit_texts:
